@@ -4,64 +4,79 @@ library(dplyr)
 library(tidyr)
 library(DT)
 
-# Interface utilisateur
+# Utilisateurs et mots de passe autorisés (à modifier selon les besoins)
+user_credentials <- data.frame(
+  username = c("user1", "user2"),
+  password = c("password1", "password2"),
+  stringsAsFactors = FALSE
+)
+
+# Interface utilisateur avec un formulaire de connexion
 ui <- fluidPage(
-  # Application du style CSS pour centrer le titre
-  tags$head(
-    tags$style(HTML("
-      .title-panel {
-        text-align: left;
-        width: 100%;
-        font-size: 50px;
-        font-weight: bold;
-      }
-    "))
-  ),
-  
-  # Titre centré
-  div(class = "title-panel", "MultiCruzi Data Analysis"),
-  
-  sidebarLayout(
-    sidebarPanel(
-      img(src = "https://le-cdn.website-editor.net/s/fbe17f898b624ad9a7e233e0ca024211/dms3rep/multi/opt/Logo-InfYnity-1920w.png?Expires=1733190112&Signature=dbZ3Myt0fv1o588CbDZCnKbtsgIbN-Wp9klvpK9QtwVGcgMPWzBnN3Bk5h5qSc6JPEr6fITbGMNFU5vhyGFXw3pQ8VwJQIuD313hL7qB7gvoJt8-ZBrgiNuWwJG1bZ7BbYD02AakxjY-khm9fFY2m7oBgWwC1ByGrvDgae8L7Vz6eA6tLqYE4-87a-tMoVBCDnxbEestrr16L8OB-DdicPcTj15LgN9EVpSsLFBmj-vyhlqG5xcylMgqny~pquy2UCXG~zHKD9DmLOXmEDbDFwFr5ENoniqhkyrNVCA6nz~FzkPiCix68eW6WTG-sVsUDopU8Ba16UbfyR2kW3gTqg__&Key-Pair-Id=K2NXBXLF010TJW", height = "100px", width = "auto"),
-      # Titre de la section de chargement de fichier
-      h4("File Upload"),
-      fileInput("file", "Upload an Excel File", accept = c(".xlsx")),
-      
-      # Texte d'aide pour le format de fichier
-      helpText("Please upload an Excel file containing the raw MultiCruzi data"),
-      helpText("The file must include the columns: 'PatientID', 'Dilution', 'Timepoint', 'IBAGs' and 'PC'."),
-      
-      # Séparateur
-      hr(),
-      
-      # Titre de la section pour le seuil
-      h4("Analysis Parameters"),
-      numericInput("seuil", "DF50 Reduction Threshold", value = 0.3),
-
-      
-      sliderInput("Plage", "Thresholds for Conclusion", 
-                  min = 0, max = 1, value = c(0.3, 0.5), step = 0.05),
-
-      
-      hr(),
-      
-      # Dynamic text display
-      uiOutput("dynamic_text"),  # Place to display the dynamic text
-      
-      # Séparateur
-      hr(),
-      
-      # Bouton d'analyse
-      actionButton("run_analysis", "Run Analysis", class = "btn-primary")
+  uiOutput("auth_ui"),  # Composant conditionnel pour l'authentification
+  conditionalPanel(
+    condition = "output.authenticated == true",  # Affichage conditionné selon l'authentification
+    # Application du style CSS pour centrer le titre
+    tags$head(
+      tags$style(HTML("
+        .title-panel {
+          text-align: left;
+          width: 100%;
+          font-size: 50px;
+          font-weight: bold;
+        }
+      "))
     ),
     
-    mainPanel(
-      tabsetPanel(
-        tabPanel("Raw Data", tableOutput("raw_data")),
-        tabPanel("Calculated DF50", tableOutput("df50_calculated")),
-        tabPanel("T6M Conclusion", DTOutput("summary_data")),
-        tabPanel("T12M Conclusion", DTOutput("summary_data_12"))
+    # Titre centré
+    div(class = "title-panel", "MultiCruzi Data Analysis"),
+    
+    sidebarLayout(
+      sidebarPanel(
+        img(src = "https://le-cdn.website-editor.net/s/fbe17f898b624ad9a7e233e0ca024211/dms3rep/multi/opt/Logo-InfYnity-1920w.png?Expires=1733190112&Signature=dbZ3Myt0fv1o588CbDZCnKbtsgIbN-Wp9klvpK9QtwVGcgMPWzBnN3Bk5h5qSc6JPEr6fITbGMNFU5vhyGFXw3pQ8VwJQIuD313hL7qB7gvoJt8-ZBrgiNuWwJG1bZ7BbYD02AakxjY-khm9fFY2m7oBgWwC1ByGrvDgae8L7Vz6eA6tLqYE4-87a-tMoVBCDnxbEestrr16L8OB-DdicPcTj15LgN9EVpSsLFBmj-vyhlqG5xcylMgqny~pquy2UCXG~zHKD9DmLOXmEDbDFwFr5ENoniqhkyrNVCA6nz~FzkPiCix68eW6WTG-sVsUDopU8Ba16UbfyR2kW3gTqg__&Key-Pair-Id=K2NXBXLF010TJW", height = "100px", width = "auto"),
+        # Titre de la section de chargement de fichier
+        h4("File Upload"),
+        fileInput("file", "Upload an Excel File", accept = c(".xlsx")),
+        
+        # Texte d'aide pour le format de fichier
+        helpText("Please upload an Excel file containing the raw MultiCruzi data"),
+        helpText("The file must include the columns: 'PatientID', 'Dilution', 'Timepoint', 'IBAGs' and 'PC'."),
+        
+        # Séparateur
+        hr(),
+        
+        # Titre de la section pour le seuil
+        h4("Analysis Parameters"),
+        # Champ de mot de passe
+        passwordInput("password", "Enter Password:", placeholder = "Enter password"),
+        
+        # Message d'erreur pour mot de passe incorrect
+        textOutput("password_message"),
+        
+        # Champ numericInput protégé par le mot de passe
+        uiOutput("seuil_ui"),
+        
+        
+        
+        hr(),
+        
+        # Dynamic text display
+        uiOutput("dynamic_text"),  # Place to display the dynamic text
+        
+        # Séparateur
+        hr(),
+        
+        # Bouton d'analyse
+        actionButton("run_analysis", "Run Analysis", class = "btn-primary")
+      ),
+      
+      mainPanel(
+        tabsetPanel(
+          tabPanel("Raw Data", tableOutput("raw_data")),
+          tabPanel("Calculated DF50", tableOutput("df50_calculated")),
+          tabPanel("T6M Conclusion", DTOutput("summary_data")),
+          tabPanel("T12M Conclusion", DTOutput("summary_data_12"))
+        )
       )
     )
   )
@@ -69,17 +84,103 @@ ui <- fluidPage(
 
 
 # Serveur
-server <- function(input, output) {
-  output$dynamic_text <- renderText({
-    seuil_value <- round((1-(1/(2^(input$seuil))))*100, 2)  # Get the value from numericInput
-    slider_value <- input$Plage[2]*100  # Get the range from sliderInput
-    
-    
-    # Create the dynamic sentence
-    paste("'Response to Treatment' means that the patient has more than", slider_value,"% of baseline reactive antigens showing a DF50 reduction greater than", seuil_value,"%")
-    
+server <- function(input, output, session) {
+  # Variable réactive pour suivre l'état de l'authentification
+  authenticated <- reactiveVal(FALSE)
+  
+  # Sortie de l'authentification pour le front-end
+  output$auth_ui <- renderUI({
+    if (!authenticated()) {
+      tagList(
+        h3("Please Log In"),
+        textInput("username", "Username"),
+        passwordInput("password", "Password"),
+        actionButton("login_btn", "Log In")
+      )
+    }
   })
   
+  # Vérification des informations de connexion
+  observeEvent(input$login_btn, {
+    if (input$username %in% user_credentials$username) {
+      # Vérification du mot de passe associé
+      correct_password <- user_credentials$password[user_credentials$username == input$username]
+      if (input$password == correct_password) {
+        authenticated(TRUE)
+        showNotification("Login successful", type = "message")
+      } else {
+        showNotification("Incorrect password", type = "error")
+      }
+    } else {
+      showNotification("Username not found", type = "error")
+    }
+  })
+  
+  
+  
+  
+  
+  
+  # Permettre l'affichage conditionnel des éléments de l'application
+  output$authenticated <- reactive({ authenticated() })
+  outputOptions(output, "authenticated", suspendWhenHidden = FALSE)
+  
+  # Mot de passe correct défini (ici "1234" comme exemple)
+  correct_password <- "1234"
+  
+
+  
+  
+
+  # Afficher ou non les champs protégés en fonction du mot de passe
+  output$seuil_ui <- renderUI({
+    if (input$password == correct_password) {
+      # Affiche les deux champs une fois le mot de passe vérifié
+      tagList(
+        numericInput("seuil", "DF50 Reduction Threshold", value = 0.3, min = 0, max = 2, step = 0.1),
+        sliderInput("Plage", "Thresholds for Conclusion (%)", min = 0, max = 100, value = c(30, 50), step = 5)
+      )
+    }
+  })
+  
+  output$dynamic_text <- renderUI({
+    # Vérifier si le mot de passe est correct
+    if (input$password == correct_password) {
+      seuil_value <- round((1 - (1 / (2^(input$seuil)))) * 100, 2)  # Calculer la valeur dynamique à partir de numericInput
+      slider_value1 <- input$Plage[1]
+      slider_value2 <- input$Plage[2]  # Récupérer les valeurs des sliders
+      
+      # Créer la phrase dynamique avec des sauts de ligne
+      HTML(paste(
+        "<p><span style='color: green;'> 'Response to Treatment': </span> More than ", slider_value2, "% of baseline reactive antigens show a DF50 reduction greater than", seuil_value, "%</p>",
+        "<p><span style='color: orange;'> 'Inconclusive': </span> Between ", slider_value1, "% & ", slider_value2, "% of baseline reactive antigens show a DF50 reduction greater than", seuil_value, "%</p>",
+        "<p><span style='color: red;'> 'No Response to Treatment': </span> Less than ", slider_value1, "% of baseline reactive antigens show a DF50 reduction greater than", seuil_value, "%</p>"
+      ))
+    } else {
+      # Si le mot de passe est incorrect ou absent, afficher des valeurs fixes
+      seuil_value <- 18.77  # Valeur fixe pour seuil
+      slider_value1 <- 30  # Valeur fixe pour slider 1
+      slider_value2 <- 50  # Valeur fixe pour slider 2
+      
+      # Créer la phrase avec des valeurs fixes
+      HTML(paste(
+        "<p><span style='color: green;'> 'Response to Treatment': </span> More than ", slider_value2, "% of baseline reactive antigens show a DF50 reduction greater than", seuil_value, "%</p>",
+        "<p><span style='color: orange;'> 'Inconclusive': </span> Between ", slider_value1, "% & ", slider_value2, "% of baseline reactive antigens show a DF50 reduction greater than", seuil_value, "%</p>",
+        "<p><span style='color: red;'> 'No Response to Treatment': </span> Less than ", slider_value1, "% of baseline reactive antigens show a DF50 reduction greater than", seuil_value, "%</p>"
+      ))
+    }
+  })
+     
+  observe({
+    # Vérifier que input$seuil est numérique et non NULL avant d'appliquer la validation
+    if (!is.null(input$seuil) && is.numeric(input$seuil)) {
+      if (input$seuil < 0) {
+        updateNumericInput(session, "seuil", value = 0)
+      } else if (input$seuil > 10) {
+        updateNumericInput(session, "seuil", value = 10)
+      }
+    }
+  })
   
   # Fonction pour lire et traiter les données
   observeEvent(input$run_analysis, {
@@ -334,8 +435,20 @@ server <- function(input, output) {
                                     "DF50_diff_IBAG131"
     )]
     # Étape 2 : Calcul des IBAGs au-dessus du seuil
-    df_differences$Nb_of_changes_above_Cutoff <- rowSums(df_differences[, -1] > input$seuil)
-    df_differences1$Nb_of_changes_above_Cutoff <- rowSums(df_differences1[, -1] > input$seuil)
+    
+    seuil_utilise <- ifelse(input$password == "1234", input$seuil, 0.3)
+    
+    df_differences$Nb_of_changes_above_Cutoff <- rowSums(df_differences[, -1] > seuil_utilise)
+    
+  
+    
+    
+    df_differences1$Nb_of_changes_above_Cutoff <- rowSums(df_differences1[, -1] > seuil_utilise)
+    
+    
+    
+    
+    
     
     # Étape 3 : Calcul du nombre d'IBAG avec DF50 > 10 au timepoint 0
     final_results_timepoint0 <- subset(df_df50, Timepoint == 0)
@@ -347,14 +460,43 @@ server <- function(input, output) {
                        by = "PatientID")
     
     # Calculer la proportion T6M
-    df_merged$proportion_above_threshold <- round(df_merged$Nb_of_changes_above_Cutoff / df_merged$Nb_of_Reactive_Antigens_at_Baseline, 3)
+    df_merged$proportion_above_threshold <- round(100*(df_merged$Nb_of_changes_above_Cutoff / df_merged$Nb_of_Reactive_Antigens_at_Baseline), 1)
     
     # Ajouter la colonne avec la classification en fonction de la proportion
-    Plage <- input$Plage
-    df_merged$Conclusion <- cut(df_merged$proportion_above_threshold,
-                                breaks = c(-1, Plage[1], Plage[2], 2),
+  
+    
+    
+    # Supposons que l'input du mot de passe soit 'input$password'
+    password_correct <- "1234"  # Remplacez par le mot de passe correct
+    Plage_default <- c(30, 50)  # Valeurs par défaut
+    
+    # Vérifier si le mot de passe est correct
+    if (input$password == password_correct) {
+      Plage <- input$Plage  # Si le mot de passe est correct, utiliser les valeurs du slider
+    } else {
+      Plage <- Plage_default  # Sinon, utiliser les valeurs par défaut
+    }
+    
+    
+    
+    
+    df_merged <- df_merged %>%
+      rename("Proportion Above Threshold %" = proportion_above_threshold)
+    
+    # Ajouter la colonne avec la classification en fonction de la proportion
+    df_merged$Conclusion <- cut(df_merged$'Proportion Above Threshold %',
+                                breaks = c(-1, Plage[1], Plage[2], Inf),
                                 labels = c("No Response to Treatment", "Inconclusive", "Response to treatment"),
-                                right = TRUE)
+                                right = FALSE)
+    
+    # Convertir Conclusion en caractère avant de modifier
+    df_merged$Conclusion <- as.character(df_merged$Conclusion)
+    
+    # Ajouter la logique pour afficher un message spécial si le nombre d'antigènes réactifs est inférieur à 6
+    df_merged$Conclusion[df_merged$Nb_of_Reactive_Antigens_at_Baseline < 6] <- "Less than 7 antigens reactive at baseline"
+    
+    # Convertir à nouveau en facteur avec tous les niveaux possibles
+    df_merged$Conclusion <- factor(df_merged$Conclusion, levels = c("No Response to Treatment", "Inconclusive", "Response to treatment", "Less than 7 antigens reactive at baseline"))
     
     # Tableau 3: Récapitulatif des IBAGs avec la catégorie de réponse
     output$summary_data <- renderDataTable({
@@ -362,24 +504,56 @@ server <- function(input, output) {
         formatStyle('Conclusion', 
                     target = 'cell', 
                     backgroundColor = styleEqual(
-                      c('Inconclusive', 'Response to treatment', 'No Response to Treatment'), 
-                      c('orange', 'lightgreen', 'lightcoral')))
+                      c('Inconclusive', 'Response to treatment', 'No Response to Treatment', 'Less than 7 antigens reactive at baseline'), 
+                      c('orange', 'lightgreen', 'lightcoral', 'yellow')))  # Ajouter un style pour le nouveau message
     })
-  
+    
+    
+    
+    
     # Fusionner les deux tables T12M
     df_merged1 <- merge(df_differences1[, c("PatientID", "Nb_of_changes_above_Cutoff")], 
                        final_results_timepoint0[, c("PatientID", "Nb_of_Reactive_Antigens_at_Baseline")], 
                        by = "PatientID")
     
     # Calculer la proportion T12M
-    df_merged1$proportion_above_threshold <- round(df_merged1$Nb_of_changes_above_Cutoff / df_merged1$Nb_of_Reactive_Antigens_at_Baseline, 3)
+    df_merged1$proportion_above_threshold <- round(100*(df_merged1$Nb_of_changes_above_Cutoff / df_merged1$Nb_of_Reactive_Antigens_at_Baseline), 1)
     
     # Ajouter la colonne avec la classification en fonction de la proportion
-    Plage <- input$Plage
-    df_merged1$Conclusion <- cut(df_merged1$proportion_above_threshold,
-                                breaks = c(-1, Plage[1], Plage[2], 2),
+    
+    
+    # Supposons que l'input du mot de passe soit 'input$password'
+    password_correct <- "1234"  # Remplacez par le mot de passe correct
+    Plage_default <- c(30, 50)  # Valeurs par défaut
+    
+    # Vérifier si le mot de passe est correct
+    if (input$password == password_correct) {
+      Plage <- input$Plage  # Si le mot de passe est correct, utiliser les valeurs du slider
+    } else {
+      Plage <- Plage_default  # Sinon, utiliser les valeurs par défaut
+    }
+    
+    
+    
+  
+    
+    df_merged1 <- df_merged1 %>%
+      rename("Proportion Above Threshold %" = proportion_above_threshold)
+    
+    df_merged1$Conclusion <- cut(df_merged1$'Proportion Above Threshold %',
+                                breaks = c(-1, Plage[1], Plage[2], Inf),
                                 labels = c("No Response to Treatment", "Inconclusive", "Response to treatment"),
-                                right = TRUE)
+                                right = FALSE)
+    
+    # Convertir Conclusion en caractère avant de modifier
+    df_merged1$Conclusion <- as.character(df_merged1$Conclusion)
+    
+    # Ajouter la logique pour afficher un message spécial si le nombre d'antigènes réactifs est inférieur à 6
+    df_merged1$Conclusion[df_merged1$Nb_of_Reactive_Antigens_at_Baseline < 6] <- "Less than 7 antigens reactive at baseline"
+    
+    # Convertir à nouveau en facteur avec tous les niveaux possibles
+    df_merged1$Conclusion <- factor(df_merged1$Conclusion, levels = c("No Response to Treatment", "Inconclusive", "Response to treatment", "Less than 7 antigens reactive at baseline"))
+    
     
     # Tableau 3: Récapitulatif des IBAGs avec la catégorie de réponse
     output$summary_data_12 <- renderDataTable({
@@ -387,8 +561,8 @@ server <- function(input, output) {
         formatStyle('Conclusion', 
                     target = 'cell', 
                     backgroundColor = styleEqual(
-                      c('Inconclusive', 'Response to treatment', 'No Response to Treatment'), 
-                      c('orange', 'lightgreen', 'lightcoral')))
+                      c('Inconclusive', 'Response to treatment', 'No Response to Treatment', 'Less than 7 antigens reactive at baseline'), 
+                      c('orange', 'lightgreen', 'lightcoral', 'yellow')))
     })
     
     
